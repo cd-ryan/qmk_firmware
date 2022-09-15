@@ -32,9 +32,10 @@
 #endif
 #ifndef PLOOPY_DPI_OPTIONS
 #    define PLOOPY_DPI_OPTIONS \
-        { 1200, 1600, 2400 }
+        { 350, 500, 650, 800, 1000, 1200, 1600, 2400 }
+//        { 1200, 1600, 2400 }
 #    ifndef PLOOPY_DPI_DEFAULT
-#        define PLOOPY_DPI_DEFAULT 1
+#        define PLOOPY_DPI_DEFAULT 2
 #    endif
 #endif
 #ifndef PLOOPY_DPI_DEFAULT
@@ -44,8 +45,13 @@
 #    define PLOOPY_DRAGSCROLL_DPI 100  // Fixed-DPI Drag Scroll
 #endif
 #ifndef PLOOPY_DRAGSCROLL_MULTIPLIER
-#    define PLOOPY_DRAGSCROLL_MULTIPLIER 0.75  // Variable-DPI Drag Scroll
+#    define PLOOPY_DRAGSCROLL_MULTIPLIER 0.2  // Variable-DPI Drag Scroll
 #endif
+#ifndef PLOOPY_DPI_PREC_MULTIPLIER
+#    define PLOOPY_DPI_PREC_MULTIPLIER 0.5  // Variable-DPI precision mode
+#endif
+#define PLOOPY_DRAGSCROLL_MOMENTARY
+#define PLOOPY_PREC_MODE_MOMENTARY
 
 keyboard_config_t keyboard_config;
 uint16_t          dpi_array[] = PLOOPY_DPI_OPTIONS;
@@ -65,6 +71,7 @@ uint16_t lastMidClick      = 0;      // Stops scrollwheel from being read if it 
 uint8_t  OptLowPin         = OPT_ENC1;
 bool     debug_encoder     = false;
 bool     is_drag_scroll    = false;
+bool     is_prec_mode      = false;
 
 __attribute__((weak)) bool encoder_update_user(uint8_t index, bool clockwise) { return true; }
 
@@ -157,6 +164,17 @@ bool process_record_kb(uint16_t keycode, keyrecord_t* record) {
         keyboard_config.dpi_config = (keyboard_config.dpi_config + 1) % DPI_OPTION_SIZE;
         eeconfig_update_kb(keyboard_config.raw);
         pointing_device_set_cpi(dpi_array[keyboard_config.dpi_config]);
+    }
+
+    if (keycode == PREC_MODE) {
+#ifndef PLOOPY_PREC_MODE_MOMENTARY
+		if (record->event.pressed)
+#endif
+		{
+			is_prec_mode ^= 1;
+		}
+
+		pointing_device_set_cpi(is_prec_mode ? (dpi_array[keyboard_config.dpi_config] * PLOOPY_DPI_PREC_MULTIPLIER) : dpi_array[keyboard_config.dpi_config]);
     }
 
     if (keycode == DRAG_SCROLL) {
