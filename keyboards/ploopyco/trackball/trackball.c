@@ -18,6 +18,9 @@
 
 #include "trackball.h"
 
+#ifndef DRAG_DEBOUNCE
+#    define DRAG_DEBOUNCE 8  // (ms) 			Time between scroll events
+#endif
 #ifndef OPT_DEBOUNCE
 #    define OPT_DEBOUNCE 5  // (ms) 			Time between scroll events
 #endif
@@ -41,14 +44,12 @@
 #ifndef PLOOPY_DPI_DEFAULT
 #    define PLOOPY_DPI_DEFAULT 0
 #endif
+#define PLOOPY_DRAGSCROLL_FIXED
 #ifndef PLOOPY_DRAGSCROLL_DPI
 #    define PLOOPY_DRAGSCROLL_DPI 100  // Fixed-DPI Drag Scroll
 #endif
 #ifndef PLOOPY_DRAGSCROLL_MULTIPLIER
 #    define PLOOPY_DRAGSCROLL_MULTIPLIER 0.5  // Variable-DPI Drag Scroll
-#endif
-#ifndef PLOOPY_DRAGSCROLL_DIVIDER
-#    define PLOOPY_DRAGSCROLL_DIVIDER 10  // only drag scroll every N iterations
 #endif
 #ifndef PLOOPY_DPI_PREC_MULTIPLIER
 #    define PLOOPY_DPI_PREC_MULTIPLIER 0.5  // Variable-DPI precision mode
@@ -59,6 +60,7 @@
 keyboard_config_t keyboard_config;
 uint16_t          dpi_array[] = PLOOPY_DPI_OPTIONS;
 #define DPI_OPTION_SIZE (sizeof(dpi_array) / sizeof(uint16_t))
+#define PLOOPY_DRAGSCROLL_H_INVERT
 
 // TODO: Implement libinput profiles
 // https://wayland.freedesktop.org/libinput/doc/latest/pointer-acceleration.html
@@ -70,8 +72,8 @@ bool     is_scroll_clicked = false;
 bool     BurstState        = false;  // init burst state for Trackball module
 uint16_t MotionStart       = 0;      // Timer for accel, 0 is resting state
 uint16_t lastScroll        = 0;      // Previous confirmed wheel event
+uint16_t lastDragScroll    = 0;      // Previous confirmed wheel event
 uint16_t lastMidClick      = 0;      // Stops scrollwheel from being read if it was pressed
-uint8_t  drag_scroll_cnt   = 0;
 uint8_t  OptLowPin         = OPT_ENC1;
 bool     debug_encoder     = false;
 bool     is_drag_scroll    = false;
@@ -130,8 +132,9 @@ report_mouse_t pointing_device_task_kb(report_mouse_t mouse_report) {
     process_wheel();
 
     if (is_drag_scroll) {
-    	drag_scroll_cnt = (drag_scroll_cnt % PLOOPY_DRAGSCROLL_DIVIDER) + 1;
-    	if (drag_scroll_cnt == 1) {
+    	if (timer_elapsed(lastDragScroll) >= DRAG_DEBOUNCE) {
+    		lastDragScroll = timer_read();
+    		xprintf("drag scrolling: %u\n", lastDragScroll);
 #ifdef PLOOPY_DRAGSCROLL_H_INVERT
         	// Invert horizontal scroll direction
         	mouse_report.h = -mouse_report.x;
@@ -139,19 +142,14 @@ report_mouse_t pointing_device_task_kb(report_mouse_t mouse_report) {
         	mouse_report.h = mouse_report.x;
 #endif
 #ifdef PLOOPY_DRAGSCROLL_INVERT
-        // Invert vertical scroll direction
+        	// Invert vertical scroll direction
         	mouse_report.v = -mouse_report.y;
 #else
         	mouse_report.v = mouse_report.y;
 #endif
-        	mouse_report.x = 0;
-        	mouse_report.y = 0;
-        } else {
-        	mouse_report.x = 0;
-        	mouse_report.y = 0;
         }
-    } else {
-    	drag_scroll_cnt = 0;
+        mouse_report.x = 0;
+        mouse_report.y = 0;
     }
 
     return pointing_device_task_user(mouse_report);
