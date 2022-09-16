@@ -32,7 +32,7 @@
 #endif
 #ifndef PLOOPY_DPI_OPTIONS
 #    define PLOOPY_DPI_OPTIONS \
-        { 200, 350, 500, 650, 800, 1000 }
+        { 200, 300, 400, 500, 650, 800, 1000 }
 //        { 1200, 1600, 2400 }
 #    ifndef PLOOPY_DPI_DEFAULT
 #        define PLOOPY_DPI_DEFAULT 2
@@ -41,12 +41,14 @@
 #ifndef PLOOPY_DPI_DEFAULT
 #    define PLOOPY_DPI_DEFAULT 0
 #endif
-#define PLOOPY_DRAGSCROLL_FIXED
 #ifndef PLOOPY_DRAGSCROLL_DPI
 #    define PLOOPY_DRAGSCROLL_DPI 100  // Fixed-DPI Drag Scroll
 #endif
 #ifndef PLOOPY_DRAGSCROLL_MULTIPLIER
-#    define PLOOPY_DRAGSCROLL_MULTIPLIER 0.3  // Variable-DPI Drag Scroll
+#    define PLOOPY_DRAGSCROLL_MULTIPLIER 0.5  // Variable-DPI Drag Scroll
+#endif
+#ifndef PLOOPY_DRAGSCROLL_DIVIDER
+#    define PLOOPY_DRAGSCROLL_DIVIDER 10  // only drag scroll every N iterations
 #endif
 #ifndef PLOOPY_DPI_PREC_MULTIPLIER
 #    define PLOOPY_DPI_PREC_MULTIPLIER 0.5  // Variable-DPI precision mode
@@ -69,7 +71,7 @@ bool     BurstState        = false;  // init burst state for Trackball module
 uint16_t MotionStart       = 0;      // Timer for accel, 0 is resting state
 uint16_t lastScroll        = 0;      // Previous confirmed wheel event
 uint16_t lastMidClick      = 0;      // Stops scrollwheel from being read if it was pressed
-uint16_t drag_scroll_cnt   = 0;
+uint8_t  drag_scroll_cnt   = 0;
 uint8_t  OptLowPin         = OPT_ENC1;
 bool     debug_encoder     = false;
 bool     is_drag_scroll    = false;
@@ -128,7 +130,8 @@ report_mouse_t pointing_device_task_kb(report_mouse_t mouse_report) {
     process_wheel();
 
     if (is_drag_scroll) {
-    	if (drag_scroll_cnt++ % 4 == 0) {
+    	drag_scroll_cnt = (drag_scroll_cnt % PLOOPY_DRAGSCROLL_DIVIDER) + 1;
+    	if (drag_scroll_cnt == 1) {
 #ifdef PLOOPY_DRAGSCROLL_H_INVERT
         	// Invert horizontal scroll direction
         	mouse_report.h = -mouse_report.x;
