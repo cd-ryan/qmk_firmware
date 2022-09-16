@@ -18,17 +18,14 @@
 
 #include "trackball.h"
 
-#ifndef DRAG_DEBOUNCE
-#    define DRAG_DEBOUNCE 8  // (ms) 			Time between scroll events
-#endif
 #ifndef OPT_DEBOUNCE
-#    define OPT_DEBOUNCE 5  // (ms) 			Time between scroll events
+#    define OPT_DEBOUNCE 5  // (ms)             Time between scroll events
 #endif
 #ifndef SCROLL_BUTT_DEBOUNCE
-#    define SCROLL_BUTT_DEBOUNCE 100  // (ms) 			Time between scroll events
+#    define SCROLL_BUTT_DEBOUNCE 100  // (ms)             Time between scroll events
 #endif
 #ifndef OPT_THRES
-#    define OPT_THRES 150  // (0-1024) 	Threshold for actication
+#    define OPT_THRES 150  // (0-1024)     Threshold for actication
 #endif
 #ifndef OPT_SCALE
 #    define OPT_SCALE 1  // Multiplier for wheel
@@ -57,6 +54,10 @@
 #define PLOOPY_DRAGSCROLL_MOMENTARY
 #define PLOOPY_PREC_MODE_MOMENTARY
 
+#define PLOOPY_DRAGSCROLL_DENOMINATOR 10
+static int _dragscroll_accumulator_x = 0;
+static int _dragscroll_accumulator_y = 0;
+
 keyboard_config_t keyboard_config;
 uint16_t          dpi_array[] = PLOOPY_DPI_OPTIONS;
 #define DPI_OPTION_SIZE (sizeof(dpi_array) / sizeof(uint16_t))
@@ -72,7 +73,6 @@ bool     is_scroll_clicked = false;
 bool     BurstState        = false;  // init burst state for Trackball module
 uint16_t MotionStart       = 0;      // Timer for accel, 0 is resting state
 uint16_t lastScroll        = 0;      // Previous confirmed wheel event
-uint16_t lastDragScroll    = 0;      // Previous confirmed wheel event
 uint16_t lastMidClick      = 0;      // Stops scrollwheel from being read if it was pressed
 uint8_t  OptLowPin         = OPT_ENC1;
 bool     debug_encoder     = false;
@@ -130,28 +130,32 @@ void process_wheel(void) {
 
 report_mouse_t pointing_device_task_kb(report_mouse_t mouse_report) {
     process_wheel();
-
-    if (is_drag_scroll) {
-    	if (timer_elapsed(lastDragScroll) >= DRAG_DEBOUNCE) {
-    		lastDragScroll = timer_read();
-    		xprintf("drag scrolling: %u\n", lastDragScroll);
+        if (is_drag_scroll) {
 #ifdef PLOOPY_DRAGSCROLL_H_INVERT
-        	// Invert horizontal scroll direction
-        	mouse_report.h = -mouse_report.x;
+            // Invert horizontal scroll direction
+            _dragscroll_accumulator_x += -mouse_report.x;
 #else
-        	mouse_report.h = mouse_report.x;
+            _dragscroll_accumulator_x += mouse_report.x;
 #endif
 #ifdef PLOOPY_DRAGSCROLL_INVERT
-        	// Invert vertical scroll direction
-        	mouse_report.v = -mouse_report.y;
+            // Invert vertical scroll direction
+            _dragscroll_accumulator_y += -mouse_report.y;
 #else
-        	mouse_report.v = mouse_report.y;
+            _dragscroll_accumulator_y += mouse_report.y;
 #endif
+            int div_x = _dragscroll_accumulator_x / PLOOPY_DRAGSCROLL_DENOMINATOR;
+            int div_y = _dragscroll_accumulator_y / PLOOPY_DRAGSCROLL_DENOMINATOR;
+            if (div_x != 0) {
+                mouse_report.h += div_x;
+                _dragscroll_accumulator_x -= div_x * PLOOPY_DRAGSCROLL_DENOMINATOR;
+            }
+            if (div_y != 0) {
+                mouse_report.v += div_y;
+                _dragscroll_accumulator_y -= div_y * PLOOPY_DRAGSCROLL_DENOMINATOR;
+            }
+            mouse_report.x = 0;
+            mouse_report.y = 0;
         }
-        mouse_report.x = 0;
-        mouse_report.y = 0;
-    }
-
     return pointing_device_task_user(mouse_report);
 }
 
@@ -178,13 +182,13 @@ bool process_record_kb(uint16_t keycode, keyrecord_t* record) {
 
     if (keycode == PREC_MODE) {
 #ifndef PLOOPY_PREC_MODE_MOMENTARY
-		if (record->event.pressed)
+        if (record->event.pressed)
 #endif
-		{
-			is_prec_mode ^= 1;
-		}
+        {
+            is_prec_mode ^= 1;
+        }
 
-		pointing_device_set_cpi(is_prec_mode ? (dpi_array[keyboard_config.dpi_config] * PLOOPY_DPI_PREC_MULTIPLIER) : dpi_array[keyboard_config.dpi_config]);
+        pointing_device_set_cpi(is_prec_mode ? (dpi_array[keyboard_config.dpi_config] * PLOOPY_DPI_PREC_MULTIPLIER) : dpi_array[keyboard_config.dpi_config]);
     }
 
     if (keycode == DRAG_SCROLL) {
