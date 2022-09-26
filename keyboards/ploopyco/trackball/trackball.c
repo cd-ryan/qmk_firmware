@@ -183,6 +183,11 @@ bool process_record_kb(uint16_t keycode, keyrecord_t* record) {
         eeconfig_update_kb(keyboard_config.raw);
         pointing_device_set_cpi(dpi_array[keyboard_config.dpi_config]);
     }
+    else if (keycode == DPI_CONFIG_REV && record->event.pressed) {
+    	keyboard_config.dpi_config = ((DPI_OPTION_SIZE + keyboard_config.dpi_config) - 1) % DPI_OPTION_SIZE;
+        eeconfig_update_kb(keyboard_config.raw);
+        pointing_device_set_cpi(dpi_array[keyboard_config.dpi_config]);
+    }
 
     if (keycode == PREC_MODE) {
 #ifndef PLOOPY_PREC_MODE_MOMENTARY
