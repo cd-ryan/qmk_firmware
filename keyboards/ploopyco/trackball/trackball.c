@@ -18,6 +18,7 @@
 
 #include "trackball.h"
 
+#define DISABLE_SCROLL_WHEEL
 #ifndef OPT_DEBOUNCE
 #    define OPT_DEBOUNCE 5  // (ms)             Time between scroll events
 #endif
@@ -129,7 +130,10 @@ void process_wheel(void) {
 }
 
 report_mouse_t pointing_device_task_kb(report_mouse_t mouse_report) {
+#ifndef DISABLE_SCROLL_WHEEL
     process_wheel();
+#endif
+
         if (is_drag_scroll) {
 #ifdef PLOOPY_DRAGSCROLL_H_INVERT
             // Invert horizontal scroll direction
