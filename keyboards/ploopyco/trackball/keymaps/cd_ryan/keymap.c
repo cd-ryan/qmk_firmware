@@ -19,12 +19,16 @@
 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    [0] = LAYOUT( /* Base */
-        KC_BTN1, KC_BTN3, KC_BTN2,
-          PREC_MODE, LT(1, KC_BTN5)
+    [0] = LAYOUT(
+        KC_BTN1, MO(2), KC_BTN2,
+          PREC_MODE, MO(1)
     ),
     [1] = LAYOUT(
-        DRAG_SCROLL, DPI_CONFIG_REV, DPI_CONFIG,
+        DRAG_SCROLL, KC_BTN3, DPI_CONFIG,
           KC_BTN4, _______
-    )
+    ),
+    [2] = LAYOUT(
+    	_______, _______, _______,
+    	  DPI_CONFIG_REV, DISABLE_HORIZONTAL_DRAG_SCROLL
+    ),
 };

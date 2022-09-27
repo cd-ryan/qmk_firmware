@@ -70,15 +70,16 @@ uint16_t          dpi_array[] = PLOOPY_DPI_OPTIONS;
 // Valid options are ACC_NONE, ACC_LINEAR, ACC_CUSTOM, ACC_QUADRATIC
 
 // Trackball State
-bool     is_scroll_clicked = false;
-bool     BurstState        = false;  // init burst state for Trackball module
-uint16_t MotionStart       = 0;      // Timer for accel, 0 is resting state
-uint16_t lastScroll        = 0;      // Previous confirmed wheel event
-uint16_t lastMidClick      = 0;      // Stops scrollwheel from being read if it was pressed
-uint8_t  OptLowPin         = OPT_ENC1;
-bool     debug_encoder     = false;
-bool     is_drag_scroll    = false;
-bool     is_prec_mode      = false;
+bool     is_scroll_clicked  = false;
+bool     BurstState         = false;  // init burst state for Trackball module
+uint16_t MotionStart        = 0;      // Timer for accel, 0 is resting state
+uint16_t lastScroll         = 0;      // Previous confirmed wheel event
+uint16_t lastMidClick       = 0;      // Stops scrollwheel from being read if it was pressed
+uint8_t  OptLowPin          = OPT_ENC1;
+bool     debug_encoder      = false;
+bool     is_drag_scroll     = false;
+bool     is_prec_mode       = false;
+bool     is_horizontal_drag = true;
 
 __attribute__((weak)) bool encoder_update_user(uint8_t index, bool clockwise) { return true; }
 
@@ -149,7 +150,7 @@ report_mouse_t pointing_device_task_kb(report_mouse_t mouse_report) {
 #endif
             int div_x = _dragscroll_accumulator_x / PLOOPY_DRAGSCROLL_DENOMINATOR;
             int div_y = _dragscroll_accumulator_y / PLOOPY_DRAGSCROLL_DENOMINATOR;
-            if (div_x != 0) {
+            if (div_x != 0 && is_horizontal_drag) {
                 mouse_report.h += div_x;
                 _dragscroll_accumulator_x -= div_x * PLOOPY_DRAGSCROLL_DENOMINATOR;
             }
@@ -187,6 +188,12 @@ bool process_record_kb(uint16_t keycode, keyrecord_t* record) {
     	keyboard_config.dpi_config = ((DPI_OPTION_SIZE + keyboard_config.dpi_config) - 1) % DPI_OPTION_SIZE;
         eeconfig_update_kb(keyboard_config.raw);
         pointing_device_set_cpi(dpi_array[keyboard_config.dpi_config]);
+    }
+
+    if (keycode == DISABLE_HORIZONTAL_DRAG_SCROLL) {
+    	if (record->event.pressed) {
+		is_horizontal_drag ^= 1;
+	}
     }
 
     if (keycode == PREC_MODE) {
